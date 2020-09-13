@@ -89,30 +89,38 @@ sha1(uint8_t *digest, uint8_t *buf, size_t len)
         ebe32(&digest[i << 2], x[i]);
 }
 
+static void
+erase(void *buf, size_t len)
+{
+    volatile uint8_t *volatile x = (volatile uint8_t *volatile)buf;
+
+    for (size_t i = 0; i < len; i++)
+        x[i] = 0;
+}
+
 int
 main(int argc, char **argv)
 {
-    uint8_t key[64];
-    ssize_t len = read(0, key, sizeof(key));
+    uint8_t h[20];
+    uint8_t ki[64 +  8] = {0};
+    uint8_t ko[64 + 20] = {0};
+    ssize_t len = read(0, ki, 64);
 
     if (len <= 0)
         return -1;
 
-    uint8_t h[20];
-    uint8_t ki[64 +  8] = {0};
-    uint8_t ko[64 + 20] = {0};
-
-    memcpy(ki, key, len);
-    memcpy(ko, key, len);
+    memcpy(ko, ki, len);
 
     for (int i = 0; i < 64; i++) {
         ki[i] ^= 0x36;
         ko[i] ^= 0x5c;
     }
-
     ebe64(&ki[64], ((uint64_t)time(NULL)) / 30);
     sha1(&ko[64], ki, sizeof(ki));
     sha1(h, ko, sizeof(ko));
+
+    erase(ki, sizeof(ki));
+    erase(ko, sizeof(ko));
 
     uint32_t ret = (dbe32(&h[h[19] & 0xF]) & ~(UINT32_C(1) << 31))
                  % UINT32_C(1000000);
