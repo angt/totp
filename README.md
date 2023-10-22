@@ -16,6 +16,14 @@ As usual, you can customize the destination with `DESTDIR` and `prefix`.
 
 ## Usage
 
+    $ echo -n JBSWY3DPEHPK3PXP | base32 -d | totp
+    $ 123456
+
+Or
+
+    $ echo JBSWY3DPEHPK3PXP | totp -b
+    $ 123456
+
 It has been thought for [secret](https://github.com/angt/secret),
 maybe it will be directly integrated in a future version, in the meantime:
 

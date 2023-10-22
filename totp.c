@@ -1,6 +1,7 @@
 // Copyright (c) 2020 by angt <adrien@gallouet.fr>
 // Don't try to reuse the HMAC-SHA1 implementation of this project,
 // you will suffer unproductively :P
+// base32 ignores non-alphabet, doesn't enforce canonical zeros or padding
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -98,17 +99,39 @@ erase(void *buf, size_t len)
         x[i] = 0;
 }
 
+static size_t
+base32_decode(uint8_t *inout, size_t len)
+{
+    uint8_t *in = inout, *out = inout;
+    const char *b32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567", *p;
+    unsigned v = 0, bits = 0;
+
+    for (; len--; in++) {
+        if (*in && (p = strchr(b32, *in))) {
+            v = (v << 5) | (unsigned)(p - b32);
+            if ((bits += 5) >= 8)
+                *out++ = (uint8_t)(v >> (bits -= 8));
+        }
+    }
+
+    return (size_t)(out - inout);
+}
+
 int
 main(int argc, char **argv)
 {
     uint8_t h[20];
-    uint8_t ki[64 +  8] = {0};
+    uint8_t ki[64 +  8];
     uint8_t ko[64 + 20] = {0};
     ssize_t len = read(0, ki, 64);
+
+    if (len > 0 && argc > 1 && argv[1][0] == '-' && argv[1][1] == 'b')
+        len = (ssize_t)base32_decode(ki, (size_t)len);
 
     if (len <= 0)
         return -1;
 
+    memset(ki + len, 0, sizeof(ki) - (size_t)len);
     memcpy(ko, ki, len);
 
     for (int i = 0; i < 64; i++) {
